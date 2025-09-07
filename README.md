@@ -3,14 +3,14 @@ SIH Project - Real-Time Public Transport Tracking
 
 # updating the project 
 ***vs code: *** 
-git clone https://github.com/venkatnarayantl/public-transport-tracker
-cd public-transport-tracker
+git clone https://github.com/venkatnarayantl/public-transport-tracker,
+cd public-transport-tracker,
 ***make code visible : ***
-code.
+code.  ,
 ***if update something: *** 
-git add .
-git commit -m "message"
-git push origin main
+git add .   ,
+git commit -m "message", 
+git push origin main,
 
 ***run the code : ***
 git pull origin main
