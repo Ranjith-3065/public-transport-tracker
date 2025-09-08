@@ -1,0 +1,33 @@
+{
+  "name": "public-transport-tracker",
+  "version": "1.0.0",
+  "description": "SIH Project - Real-Time Public Transport Tracking",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/venkatnarayantl/public-transport-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/venkatnarayantl/public-transport-tracker/issues"
+  },
+  "homepage": "https://github.com/venkatnarayantl/public-transport-tracker#readme",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.13",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "tailwindcss": "^4.1.13"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.10"
+  }
+}
