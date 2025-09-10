@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link href="../public/output.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    #map { height: 500px; border-radius: 12px; }
+  </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center p-6">
+
+  <h1 class="text-3xl font-bold text-blue-600 mb-6">Bus Tracker Dashboard</h1>
+
+  <!-- Map Section -->
+  <div id="map" class="w-full max-w-4xl shadow-lg"></div>
+
+  <!-- Search Section -->
+  <div class="mt-6 flex items-center space-x-4">
+    <input id="searchInput" 
+           type="text" 
+           placeholder="Search location..." 
+           class="px-4 py-2 rounded-lg border shadow w-72 focus:ring-2 focus:ring-blue-500">
+
+    <button id="voiceBtn" 
+            class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 flex items-center space-x-2">
+      🎤 <span>Speak</span>
+    </button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Initialize map
+    const map = L.map('map').setView([12.9716, 77.5946], 13); // Default: Bangalore
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Handle text search (basic example with Nominatim API)
+    async function searchLocation(query) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.length > 0) {
+        const lat = data[0].lat, lon = data[0].lon;
+        map.setView([lat, lon], 14);
+        L.marker([lat, lon]).addTo(map).bindPopup(query).openPopup();
+      } else {
+        alert("Location not found!");
+      }
+    }
+
+    // Search on enter
+    document.getElementById("searchInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        searchLocation(e.target.value);
+      }
+    });
+
+    // Voice Search
+    const voiceBtn = document.getElementById("voiceBtn");
+    const searchInput = document.getElementById("searchInput");
+
+    voiceBtn.addEventListener("click", () => {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-IN";
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const speechText = event.results[0][0].transcript;
+        searchInput.value = speechText;
+        searchLocation(speechText);
+      };
+    });
+  </script>
+</body>
+</html>

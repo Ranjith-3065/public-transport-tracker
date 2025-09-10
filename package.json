@@ -2,9 +2,11 @@
   "name": "public-transport-tracker",
   "version": "1.0.0",
   "description": "SIH Project - Real-Time Public Transport Tracking",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tailwind": "tailwindcss -i ./src/input.css -o ./public/styles/output.css --watch",
+    "start": "concurrently \"npm run tailwind\" \"nodemon backend/server.js\""
   },
   "repository": {
     "type": "git",
@@ -20,10 +22,12 @@
   "homepage": "https://github.com/venkatnarayantl/public-transport-tracker#readme",
   "dependencies": {
     "@tailwindcss/cli": "^4.1.13",
+    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "socket.io": "^4.8.1",
     "tailwindcss": "^4.1.13"
   },
   "devDependencies": {
