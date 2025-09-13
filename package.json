@@ -5,28 +5,33 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "tailwind": "tailwindcss -i ./src/input.css -o ./public/styles/output.css --watch",
+    "tailwind": "tailwindcss -i ./frontend/views/input.css -o ./frontend/public/output.css --watch",
     "start": "concurrently \"npm run tailwind\" \"nodemon backend/server.js\""
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/venkatnarayantl/public-transport-tracker.git"
+    "url": "git+https://github.com/Ranjith-3065/public-transport-tracker.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/venkatnarayantl/public-transport-tracker/issues"
+    "url": "https://github.com/Ranjith-3065/public-transport-tracker/issues"
   },
-  "homepage": "https://github.com/venkatnarayantl/public-transport-tracker#readme",
+  "homepage": "https://github.com/Ranjith-3065/public-transport-tracker#readme",
   "dependencies": {
     "@tailwindcss/cli": "^4.1.13",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.1",
     "socket.io": "^4.8.1",
     "tailwindcss": "^4.1.13"
   },

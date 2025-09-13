@@ -1,59 +1,50 @@
-// core modules
+const express = require("express");
+const http = require("http");
+const path = require("path");
+const mongoose = require("mongoose");
+const cookies = require("cookie-parser");
+const dotenv = require("dotenv");
+const authRoutes = require("./router/auth");
+const authMiddleware = require("../backend/middleware/authmiddleware");
 
+dotenv.config({ path: path.join(__dirname, ".env") });
 
-const express = require('express');
-const { Server } = require('socket.io');
-const http = require('http');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const path = require('path');
-
-
-// local modules
-
-const dashboardRouter = require("./router/dashborad");
-
-
-
-
-
-// Initialize Express app and HTTP server
 const app = express();
-
 const server = http.createServer(app);
 
-const io = new Server(server);
-
-// Socket.io connection
-io.on('connection', (socket) => {
-    console.log('A user connected');    
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
-    });
-});
-
-
-
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '../public')));
-app.set('view engine', 'ejs');
+app.use(express.json());
+app.use(cookies());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "../frontend/public")));
+
+// Views
+app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "../frontend/views"));
 
-
-
 // Routes
-app.use( dashboardRouter);
+app.use("/api/auth", authRoutes);
 
+// Pages
+app.get("/", (req, res) => res.redirect("/login"));
+app.get("/login", (req, res) => res.render("login"));
+app.get("/register", (req, res) => res.render("register"));
+app.get("/dashboard",authMiddleware,(req, res) => res.render("dashboard", { title: "Bus Tracker Dashboard" }));
+app.use("/logout", authRoutes);
 
+// Start server
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI;
 
-// port section 
-const PORT = 3000;
-
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
-
-
-
+if (!MONGO_URI) {
+  console.warn("⚠️ No MongoDB URI found. Running without DB.");
+  app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+} else {
+  mongoose
+    .connect(MONGO_URI)
+    .then(() => {
+      console.log("✅ Connected to MongoDB");
+      app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+    })
+    .catch((err) => console.error("❌ MongoDB connection error:", err));
+}

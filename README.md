@@ -4,7 +4,7 @@ SIH Project - Real-Time Public Transport Tracking
 # updating the project 
 ```bash
 ###vs code:
-git clone https://github.com/venkatnarayantl/public-transport-tracker,
+git clone https://github.com/Ranjith-3065/public-transport-tracker,
 cd public-transport-tracker,
 
 ###make code visible :

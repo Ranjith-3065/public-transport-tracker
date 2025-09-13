@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+</head>
+<body>
+  <form id="loginForm">
+    <input type="email" id="email" placeholder="Email" required /><br/>
+    <input type="password" id="password" placeholder="Password" required /><br/>
+    <button type="submit">Login</button>
+
+  </form>
+  <p id="msg" style="color:red;"></p>
+  <p>Not registered? <a href="register">register here</a></p>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: document.getElementById("email").value,
+          password: document.getElementById("password").value
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.user.role);
+
+        if (data.user.role === "commuter") window.location.href = "/dashboard";
+        else if (data.user.role === "authority") window.location.href = "/authority-dashboard";
+        else if (data.user.role === "municipal") window.location.href = "/municipal-dashboard";
+      } else {
+        document.getElementById("msg").textContent = data.message;
+      }
+    });
+  </script>
+</body>
+</html>
