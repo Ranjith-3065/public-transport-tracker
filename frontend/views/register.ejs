@@ -3,26 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <title>Register</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="/output.css ">
+
+  <style>
+    body {
+      background: linear-gradient(-45deg, #0f0f23, #1a1a2e, #16213e, #0f3460);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+      font-family: "Inter", sans-serif;
+    }
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* Loader */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: #0f0f23;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+    .spinner {
+      width: 60px; height: 60px;
+      border: 6px solid rgba(255,255,255,0.2);
+      border-top: 6px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+  </style>
 </head>
-<body>
-  <form id="registerForm">
-    <input type="text" id="name" placeholder="Name" required /><br/>
-    <input type="email" id="email" placeholder="Email" required /><br/>
-    <input type="password" id="password" placeholder="Password" required /><br/>
-    <select id="role">
-      <option value="commuter">Commuter</option>
-      <option value="authority">Transport Authority</option>
-      <option value="municipal">Municipal Corporation</option>
-    </select><br/>
-    <button type="submit">Register</button>
-  </form>
-  <p id="msg" style="color:red;"></p>
-  <p>Already registered? <a href="/login">Login here</a></p>
+<body class="flex items-center justify-center min-h-screen text-white">
+
+  <!-- Loader -->
+  <div id="loader"><div class="spinner"></div></div>
+
+  <!-- Register Card -->
+  <div class="glass rounded-2xl p-8 w-full max-w-md shadow-xl hidden" id="content">
+    <h2 class="text-3xl font-bold text-center mb-6">📝 Register</h2>
+    <form id="registerForm" class="space-y-4">
+      <input type="text" id="name" placeholder="👤 Name" required
+        class="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-gray-700 focus:outline-none" />
+      <input type="email" id="email" placeholder="📧 Email" required
+        class="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-gray-700 focus:outline-none" />
+      <input type="password" id="password" placeholder="🔒 Password" required
+        class="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-gray-700 focus:outline-none" />
+      <select id="role"
+        class="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-gray-700 focus:outline-none">
+        <option value="commuter">🚶 Commuter</option>
+        <option value="authority">🏢 Transport Authority</option>
+        <option value="municipal">🏛 Municipal Corporation</option>
+      </select>
+      <button type="submit"
+        class="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:scale-105 transition font-semibold">
+        🚀 Register
+      </button>
+    </form>
+    <p id="msg" class="mt-3 text-center text-red-400 text-sm"></p>
+    <p class="mt-4 text-center text-gray-400">Already registered?
+      <a href="/login" onclick="showLoader(event)" class="text-blue-400 hover:underline">Login here</a>
+    </p>
+  </div>
 
   <script>
+    // Loader on page load
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("content").classList.remove("hidden");
+      }, 1200);
+    });
+
+    // Show loader before navigating
+    function showLoader(e) {
+      e.preventDefault();
+      document.getElementById("loader").style.display = "flex";
+      setTimeout(() => { window.location.href = e.target.href; }, 800);
+    }
+
+    // Register API
     const form = document.getElementById("registerForm");
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      document.getElementById("loader").style.display = "flex";
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -33,9 +112,14 @@
           role: document.getElementById("role").value
         })
       });
+
       const data = await res.json();
       document.getElementById("msg").textContent = data.message;
-      if (data.success) setTimeout(() => window.location.href = "/login", 1000);
+      if (data.success) {
+        setTimeout(() => window.location.href = "/login", 800);
+      } else {
+        document.getElementById("loader").style.display = "none";
+      }
     });
   </script>
 </body>

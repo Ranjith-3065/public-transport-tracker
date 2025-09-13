@@ -3,16 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <title>Login</title>
-</head>
-<body>
-  <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required /><br/>
-    <input type="password" id="password" placeholder="Password" required /><br/>
-    <button type="submit">Login</button>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  </form>
-  <p id="msg" style="color:red;"></p>
-  <p>Not registered? <a href="register">register here</a></p>
+  <!-- Tailwind + Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/output.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Inter', 'sans-serif'],
+            'mono': ['JetBrains Mono', 'monospace'],
+          },
+          animation: {
+            'gradient': 'gradient 12s ease infinite',
+            'float': 'float 6s ease-in-out infinite',
+            'slide-up': 'slide-up 0.6s ease-out',
+            'bounce-in': 'bounce-in 0.6s ease-out',
+          },
+          keyframes: {
+            gradient: {
+              '0%, 100%': { 'background-position': '0% 50%' },
+              '50%': { 'background-position': '100% 50%' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-12px)' },
+            },
+            'slide-up': {
+              '0%': { transform: 'translateY(60px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            'bounce-in': {
+              '0%': { transform: 'scale(0.3)', opacity: '0' },
+              '50%': { transform: 'scale(1.05)' },
+              '70%': { transform: 'scale(0.95)' },
+              '100%': { transform: 'scale(1)', opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(-45deg, #0f0f23, #1a1a2e, #16213e, #0f3460);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+    }
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .neon-border {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.1);
+    }
+    .search-glow:focus {
+      box-shadow: 0 0 30px rgba(34, 197, 94, 0.5), 0 0 60px rgba(34, 197, 94, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center text-white overflow-x-hidden">
+  
+  <!-- Login Card -->
+  <div class="glass-effect neon-border rounded-3xl p-10 w-full max-w-md animate-bounce-in">
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-8">
+      <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center animate-float">
+        <span class="text-3xl">🔑</span>
+      </div>
+      <h1 class="text-3xl font-extrabold mt-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+        LOGIN
+      </h1>
+      <p class="text-gray-400 mt-2">Welcome back! Please sign in to continue</p>
+    </div>
+
+    <!-- Form -->
+    <form id="loginForm" class="space-y-5">
+      <input 
+        type="email" 
+        id="email" 
+        placeholder="📧 Email" 
+        required
+        class="w-full px-5 py-3 rounded-2xl bg-gray-900/50 border border-gray-700 text-white placeholder-gray-400 focus:outline-none search-glow transition-all duration-300"
+      />
+      
+      <input 
+        type="password" 
+        id="password" 
+        placeholder="🔒 Password" 
+        required
+        class="w-full px-5 py-3 rounded-2xl bg-gray-900/50 border border-gray-700 text-white placeholder-gray-400 focus:outline-none search-glow transition-all duration-300"
+      />
+
+      <button 
+        type="submit"
+        class="w-full py-3 rounded-2xl font-semibold bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+      >
+        🚀 Login
+      </button>
+    </form>
+
+    <!-- Error Message -->
+    <p id="msg" class="mt-4 text-center text-red-400 text-sm"></p>
+
+    <!-- Register -->
+    <p class="mt-6 text-center text-gray-400 text-sm">
+      Not registered? 
+      <a href="register" class="text-blue-400 hover:text-purple-400 transition-colors duration-200">Register here</a>
+    </p>
+  </div>
 
   <script>
     const form = document.getElementById("loginForm");

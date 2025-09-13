@@ -6,6 +6,7 @@ const cookies = require("cookie-parser");
 const dotenv = require("dotenv");
 const authRoutes = require("./router/auth");
 const authMiddleware = require("../backend/middleware/authmiddleware");
+const busesRoutes = require("./router/buses");
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
@@ -31,6 +32,10 @@ app.get("/login", (req, res) => res.render("login"));
 app.get("/register", (req, res) => res.render("register"));
 app.get("/dashboard",authMiddleware,(req, res) => res.render("dashboard", { title: "Bus Tracker Dashboard" }));
 app.use("/logout", authRoutes);
+app.use("/api/buses", busesRoutes);
+// New routes for the links in dashboard.ejs
+app.get("/busses-available",(req, res) => res.render("busses-available", { title: "Buses Available on this Route" }));
+app.get("/source-destination",(req, res) => res.render("source-destination", { title: "Source to Destination Route" }));
 
 // Start server
 const PORT = process.env.PORT || 5000;

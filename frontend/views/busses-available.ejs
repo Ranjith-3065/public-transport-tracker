@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Available Buses</title>
+  <link rel="stylesheet" href="/output.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(-45deg, #0f0f23, #1a1a2e, #16213e, #0f3460);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+      color: white;
+    }
+
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .neon-border {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.1);
+    }
+  </style>
+</head>
+<body class="min-h-screen overflow-x-hidden">
+
+    <%- include('partials/search-section') %>
+
+  <div class="floating-particles" id="particles"></div>
+
+  <div class="max-w-7xl mx-auto pt-32 px-4">
+    <h1 class="text-5xl font-bold text-center mb-12 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent animate-glow">
+      🚌 Available Buses
+    </h1>
+
+    <!-- Map -->
+    <div id="busMap" class="h-96 md:h-[600px] w-full rounded-2xl glass-effect neon-border mb-8 map-3d"></div>
+
+    <!-- Bus Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="busGrid"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Floating particles
+    function createParticles() {
+      const particlesContainer = document.getElementById('particles');
+      const particleCount = 30;
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 8 + 's';
+        particle.style.animationDuration = (Math.random() * 4 + 6) + 's';
+        particlesContainer.appendChild(particle);
+      }
+    }
+    createParticles();
+
+    const busMap = L.map('busMap', { zoomControl: true }).setView([12.9716, 77.5946], 13);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(busMap);
+
+    // Custom marker like main dashboard
+    function createBusMarker(bus){
+      return L.marker([bus.location.coordinates[1], bus.location.coordinates[0]], {
+        icon: L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            background:#f59e0b;
+            width:35px;
+            height:35px;
+            border-radius:50%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            box-shadow:0 0 15px #f59e0b66, inset 0 0 10px #f59e0b44;
+            animation:bounce 3s infinite ease-in-out;
+          ">🚌</div>`,
+          iconSize: [35, 35]
+        })
+      }).bindPopup(`<b>${bus.busNumber}</b><br>Route: ${bus.route}<br>Status: ${bus.status}<br>Next Stop: ${bus.nextStop}`);
+    }
+
+    async function loadBuses(){
+      try {
+        const res = await fetch("/api/buses/available");
+        const data = await res.json();
+
+        if(data.success){
+          const busGrid = document.getElementById("busGrid");
+          busGrid.innerHTML = "";
+
+          data.buses.forEach(bus => {
+            // Map marker
+            createBusMarker(bus).addTo(busMap);
+
+            // Grid card
+            const card = document.createElement("div");
+            card.className = "glass-effect rounded-xl p-4 border border-gray-700/50";
+            card.innerHTML = `
+              <h3 class="font-bold text-xl text-orange-400">${bus.busNumber}</h3>
+              <p>Route: ${bus.route}</p>
+              <p>Status: <span class="${bus.status === 'On Time' ? 'text-green-400' : 'text-red-400'}">${bus.status}</span></p>
+              <p>Next Stop: ${bus.nextStop}</p>
+            `;
+            busGrid.appendChild(card);
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load buses:", error);
+      }
+    }
+
+    loadBuses();
+  </script>
+</body>
+</html>
