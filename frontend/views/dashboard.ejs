@@ -164,7 +164,7 @@
   
           
           <%- include('partials/search-section') %>
-    
+          
     <!-- Main Content -->
     <div class="pt-32 pb-8 px-4">
       <div class="max-w-7xl mx-auto">
@@ -211,9 +211,8 @@
             <div class="text-sm text-gray-400">Bus Stops</div>
           </div>
           <div class="status-card glass-effect rounded-2xl p-6 text-center neon-border animate-bounce-in" style="animation-delay: 0.3s">
-            <div class="text-3xl mb-2">⚡</div>
-            <div class="text-2xl font-bold text-yellow-400 mb-1">0.3s</div>
-            <div class="text-sm text-gray-400">Response Time</div>
+            <div class="text-2xl font-bold text-yellow-400 mb-1"><a href="municipal">Municipal Access</a>🎯</div>
+            <div class="text-sm text-gray-400"></div>
           </div>
         </div>
         
@@ -281,8 +280,13 @@
                   <span class="text-white font-bold">3</span>
                 </div>
                 <div>
-                  <div class="font-semibold text-purple-400">Avg Wait Time</div>
-                  <div class="text-sm text-gray-400">Minutes</div>
+                  <div class="font-semibold text-purple-400">
+                  <% if (typeof user !== "undefined" && user.role === "authority") { %>
+                  <a href="/authorities"> 🛠 Authorities Panel </a>
+                  <% } %>
+
+                  </div>
+                  <div class="text-sm text-gray-400">Authority</div>
                 </div>
               </div>
             </div>
@@ -380,10 +384,8 @@ checkAuth();
     }).addTo(map);
 
     // Dark theme map tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 19
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:'&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
     }).addTo(map);
 
     // Enhanced custom markers
@@ -451,8 +453,7 @@ checkAuth();
       const originalPlaceholder = searchInput.placeholder;
       
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
-        const res = await fetch(url);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         
         if (data.length > 0) {

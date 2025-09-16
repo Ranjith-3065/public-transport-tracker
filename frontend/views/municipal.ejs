@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Municipal Dashboard</title>
+  <link rel="stylesheet" href="/output.css">
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="max-w-4xl mx-auto py-8">
+    <h1 class="text-3xl font-bold mb-6 text-center">Municipal Authority Dashboard</h1>
+
+    <% if (requests && requests.length > 0) { %>
+  <% requests.forEach(req => { %>
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-xl font-semibold mb-2"><%= req.town %></h2>
+      <p><strong>Source:</strong> <%= req.source %></p>
+      <p><strong>Destination:</strong> <%= req.destination %></p>
+      <p><strong>Reason:</strong> <%= req.reason %></p>
+
+      <form action="/municipal/<%= req._id %>/decision" method="POST" class="mt-4 flex gap-3">
+        <input type="hidden" name="decision" value="Approved">
+        <button class="px-4 py-2 bg-green-600 text-white rounded">✅ Approve</button>
+      </form>
+      <form action="/municipal/<%= req._id %>/decision" method="POST" class="mt-4 flex gap-3">
+        <input type="hidden" name="decision" value="Rejected">
+        <button class="px-4 py-2 bg-red-600 text-white rounded">❌ Reject</button>
+      </form>
+    </div>
+  <% }) %>
+<% } else { %>
+  <p class="text-center text-gray-600">No forwarded requests.</p>
+<% } %>
+
+</body>
+</html>

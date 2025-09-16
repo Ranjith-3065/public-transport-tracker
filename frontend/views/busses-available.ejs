@@ -16,22 +16,39 @@
       animation: gradient 15s ease infinite;
       color: white;
     }
-
     .glass-effect {
       background: rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
-
     .neon-border {
       box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.1);
+    }
+    .map-3d {
+      transform-style: preserve-3d;
+      transition: transform 0.3s ease;
+    }
+    .map-3d:hover {
+      transform: perspective(1000px) rotateX(2deg) rotateY(2deg);
+    }
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: rgba(59, 130, 246, 0.6);
+      border-radius: 50%;
+      animation: float 8s infinite linear;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10%, 90% { opacity: 1; }
+      100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
     }
   </style>
 </head>
 <body class="min-h-screen overflow-x-hidden">
-
-    <%- include('partials/search-section') %>
-
+  
+  <%- include('partials/search-section') %>
   <div class="floating-particles" id="particles"></div>
 
   <div class="max-w-7xl mx-auto pt-32 px-4">
@@ -45,10 +62,58 @@
     <!-- Bus Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="busGrid"></div>
   </div>
+  <div id="busRequestForm" class="fixed inset-0 bg-black/70 flex items-center justify-center hidden z-50">
+    <div class="glass-effect p-6 rounded-2xl max-w-md w-full bg-gray-900 border border-gray-700">
+      <h2 class="text-xl font-bold mb-4 text-orange-400">Request New Bus Route</h2>
+      <form id="requestForm">
+        <label class="block mb-2">Town / City</label>
+        <input type="text" id="townInput" class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-3" required>
+        
+        <label class="block mb-2">Source</label>
+        <input type="text" id="sourceInput" class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-3" required>
+        
+        <label class="block mb-2">Destination</label>
+        <input type="text" id="destInput" class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-3" required>
+        
+        <label class="block mb-2">Reason / Notes</label>
+        <textarea id="reasonInput" class="w-full p-2 rounded bg-gray-800 border border-gray-700 mb-3"></textarea>
+        
+        <div class="flex justify-end gap-3">
+          <button type="button" onclick="closeRequestForm()" class="px-4 py-2 bg-gray-600 rounded">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded text-white">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 invisible transition-all duration-300">
+    <div class="text-center">
+      <div class="w-16 h-16 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-white font-semibold">Fetching buses...</p>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Floating particles
+    document.body.style.display = "none";
+
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/auth/verify-cookie");
+        const data = await res.json();
+        if (res.ok && data.valid) {
+          document.body.style.display = "block";
+        } else {
+          window.location.href = "/login";
+        }
+      } catch {
+        window.location.href = "/login";
+      }
+    }
+    checkAuth();
+
+    // Particles
     function createParticles() {
       const particlesContainer = document.getElementById('particles');
       const particleCount = 30;
@@ -63,45 +128,56 @@
     }
     createParticles();
 
-    const busMap = L.map('busMap', { zoomControl: true }).setView([12.9716, 77.5946], 13);
+    const map = L.map('busMap', { zoomControl: true }).setView([12.9716, 77.5946], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:'&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+    }).addTo(map);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(busMap);
-
-    // Custom marker like main dashboard
-    function createBusMarker(bus){
+    // Custom marker
+    function createBusMarker(bus) {
       return L.marker([bus.location.coordinates[1], bus.location.coordinates[0]], {
         icon: L.divIcon({
           className: 'custom-marker',
           html: `<div style="
-            background:#f59e0b;
-            width:35px;
-            height:35px;
-            border-radius:50%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            box-shadow:0 0 15px #f59e0b66, inset 0 0 10px #f59e0b44;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 20px #f59e0b66, 0 6px 20px rgba(0,0,0,0.4);
+            display:flex; align-items:center; justify-content:center;
             animation:bounce 3s infinite ease-in-out;
           ">🚌</div>`,
-          iconSize: [35, 35]
+          iconSize: [35, 35],
+          iconAnchor: [17, 17]
         })
-      }).bindPopup(`<b>${bus.busNumber}</b><br>Route: ${bus.route}<br>Status: ${bus.status}<br>Next Stop: ${bus.nextStop}`);
+      }).bindPopup(`
+        <div style="background:#1f2937; padding:12px; border-radius:10px; color:white; min-width:200px;">
+          <h3 class="text-lg font-bold text-orange-400 mb-2">${bus.busNumber}</h3>
+          <p>Route: ${bus.route}</p>
+          <p>Status: <span style="color:${bus.status==='On Time'?'#34d399':'#f87171'}">${bus.status}</span></p>
+          <p>Next Stop: ${bus.nextStop}</p>
+        </div>
+      `);
     }
 
-    async function loadBuses(){
+    function showLoading() {
+      document.getElementById('loadingOverlay').classList.remove('opacity-0', 'invisible');
+    }
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.add('opacity-0', 'invisible');
+    }
+
+     async function loadBuses() {
+      showLoading();
       try {
         const res = await fetch("/api/buses/available");
         const data = await res.json();
-
-        if(data.success){
+        if (data.success) {
           const busGrid = document.getElementById("busGrid");
           busGrid.innerHTML = "";
-
           data.buses.forEach(bus => {
-            // Map marker
             createBusMarker(bus).addTo(busMap);
-
-            // Grid card
             const card = document.createElement("div");
             card.className = "glass-effect rounded-xl p-4 border border-gray-700/50";
             card.innerHTML = `
@@ -113,12 +189,169 @@
             busGrid.appendChild(card);
           });
         }
-      } catch (error) {
-        console.error("Failed to load buses:", error);
+      } catch (err) {
+        console.error("Failed to load buses:", err);
+      } finally {
+        hideLoading();
       }
     }
-
     loadBuses();
+    // Enhanced search function
+    async function searchLocation(query) {
+  if (!query.trim()) return;
+  
+  showLoading();
+  const searchInput = document.getElementById("searchInput");
+  const originalPlaceholder = searchInput.placeholder;
+
+  try {
+    // 1️⃣ Find location coordinates
+    const locRes = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    const locData = await locRes.json();
+
+    if (locData.length > 0) {
+      const lat = parseFloat(locData[0].lat);
+      const lon = parseFloat(locData[0].lon);
+      const displayName = locData[0].display_name;
+
+      map.flyTo([lat, lon], 13, { animate: true, duration: 2.5 });
+
+      // 2️⃣ Fetch buses matching the query
+      const busRes = await fetch(`/api/buses/search?query=${encodeURIComponent(query)}`);
+      const busData = await busRes.json();
+
+      const busGrid = document.getElementById("busGrid");
+      busGrid.innerHTML = "";
+
+      if (busData.success && busData.buses.length > 0) {
+        busData.buses.forEach(bus => {
+          createBusMarker(bus).addTo(map); // show on map
+
+          // also show in grid
+          const card = document.createElement("div");
+          card.className = "glass-effect rounded-xl p-4 border border-gray-700/50";
+          card.innerHTML = `
+            <h3 class="font-bold text-xl text-orange-400">${bus.busNumber}</h3>
+            <p>Route: ${bus.route}</p>
+            <p>Status: <span class="${bus.status === 'On Time' ? 'text-green-400' : 'text-red-400'}">${bus.status}</span></p>
+            <p>Next Stop: ${bus.nextStop}</p>
+          `;
+          busGrid.appendChild(card);
+        });
+      } else {
+        busGrid.innerHTML = `<p class="text-red-400 text-center col-span-3">No buses found for "${query}"</p>`;
+        busGrid.innerHTML = `
+  <div class="text-center col-span-3">
+    <p class="text-red-400 mb-4">No buses found for "${query}"</p>
+    <button onclick="openRequestForm('${query}')" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded text-white">
+      Request New Bus Service
+    </button>
+  </div>
+`;
+      }
+
+    } else {
+      searchInput.placeholder = "❌ Location not found - try again";
+    }
+  } catch (err) {
+    console.error(err);
+    searchInput.placeholder = "⚠️ Error fetching buses";
+  } finally {
+    hideLoading();
+    setTimeout(() => searchInput.placeholder = originalPlaceholder, 3000);
+  }
+}
+    // Search event listeners
+    document.getElementById("searchInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        searchLocation(e.target.value);
+      }
+    });
+
+    // Enhanced voice search
+    const voiceBtn = document.getElementById("voiceBtn");
+    const searchInput = document.getElementById("searchInput");
+
+    voiceBtn.addEventListener("click", () => {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("🎤 Voice search requires Chrome or Edge browser");
+        return;
+      }
+      
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-IN";
+      
+      // Listening state
+      voiceBtn.innerHTML = `
+        <svg class="w-5 h-5 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+        </svg>
+        <span class="hidden sm:inline">Listening...</span>
+      `;
+      voiceBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+      voiceBtn.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-emerald-600');
+      
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const speechText = event.results[0][0].transcript;
+        searchInput.value = speechText;
+        searchLocation(speechText);
+        resetVoiceButton();
+      };
+      
+      recognition.onerror = () => {
+        alert("🎤 Voice recognition failed. Please check microphone permissions.");
+        resetVoiceButton();
+      };
+      
+      recognition.onend = resetVoiceButton;
+      
+      function resetVoiceButton() {
+        voiceBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v3a3 3 0 01-3 3z"></path>
+          </svg>
+          <span class="hidden sm:inline">Speak</span>
+        `;
+        voiceBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+        voiceBtn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-emerald-600');
+      }
+    });
+    // Request form
+    function openRequestForm(query) {
+      document.getElementById("busRequestForm").classList.remove("hidden");
+      document.getElementById("townInput").value = query || "";
+    }
+    function closeRequestForm() {
+      document.getElementById("busRequestForm").classList.add("hidden");
+    }
+    document.getElementById("requestForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const reqData = {
+        town: document.getElementById("townInput").value,
+        source: document.getElementById("sourceInput").value,
+        destination: document.getElementById("destInput").value,
+        reason: document.getElementById("reasonInput").value
+      };
+      try {
+        const res = await fetch("/api/bus-requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(reqData)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("✅ Request sent to authorities!");
+          closeRequestForm();
+        } else {
+          alert("❌ Failed to send request");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("⚠️ Error sending request");
+      }
+    });
   </script>
 </body>
 </html>

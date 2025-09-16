@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus forward form</title>
+</head>
+<body>
+    <div class="max-w-6xl mx-auto p-6">
+  <h1 class="text-3xl font-bold text-orange-400 mb-6">📝 Bus Route Requests</h1>
+  <table class="w-full border-collapse text-left glass-effect rounded-xl">
+    <thead>
+      <tr class="bg-gray-800">
+        <th class="p-3">Town</th>
+        <th class="p-3">Source</th>
+        <th class="p-3">Destination</th>
+        <th class="p-3">Reason</th>
+        <th class="p-3">Status</th>
+        <th class="p-3">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="requestsTable"></tbody>
+  </table>
+</div>
+
+<script>
+async function loadRequests() {
+  const res = await fetch("/api/bus-requests/pending");
+  const data = await res.json();
+  if (data.success) {
+    const tbody = document.getElementById("requestsTable");
+    tbody.innerHTML = "";
+    data.requests.forEach(req => {
+      tbody.innerHTML += `
+        <tr class="border-b border-gray-700">
+          <td class="p-3">${req.town}</td>
+          <td class="p-3">${req.source}</td>
+          <td class="p-3">${req.destination}</td>
+          <td class="p-3">${req.reason}</td>
+          <td class="p-3 text-yellow-400">${req.status}</td>
+          <td class="p-3 flex gap-2">
+            <button onclick="updateStatus('${req._id}','Forwarded')" class="px-3 py-1 bg-blue-500 rounded">Forward</button>
+            <button onclick="updateStatus('${req._id}','Rejected')" class="px-3 py-1 bg-red-500 rounded">Reject</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+}
+
+async function updateStatus(id, status) {
+  await fetch(`/api/bus-requests/${id}/status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
+  });
+  loadRequests();
+}
+
+loadRequests();
+</script>
+
+</body>
+</html>

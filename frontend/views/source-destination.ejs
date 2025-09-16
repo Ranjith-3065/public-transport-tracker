@@ -1,11 +1,312 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Source to Destination with Bus Simulation</title>
+  <link rel="stylesheet" href="/output.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #051f5a;
+      color: white;
+    }
+    .page-container { max-width: 1200px; margin: auto; padding: 30px 20px; }
+    h1 {
+      text-align: center;
+      font-size: 36px;
+      font-weight: bold;
+      background: linear-gradient(90deg, #facc15, #f97316);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      margin-bottom: 20px;
+    }
+    #map { height: 500px; border-radius: 15px; }
+    .input-box {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 12px;
+      border-radius: 12px;
+      color: white;
+      width: 100%;
+      transition: 0.3s;
+    }
+    .input-box:focus {
+      outline: none;
+      border-color: #facc15;
+      box-shadow: 0 0 10px #facc15;
+    }
+    .voice-btn {
+      padding: 10px 16px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #facc15, #f97316);
+      color: black;
+      font-size: 18px;
+      transition: 0.3s;
+      cursor: pointer;
+      border: none;
+    }
+    .voice-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px #facc15;
+    }
+    .custom-popup {
+      background: white;
+      color: black;
+      padding: 12px;
+      border-radius: 10px;
+      border: 2px solid #facc15;
+      font-size: 14px;
+      text-align: center;
+    }
+    .custom-popup h3 { color: #f97316; margin-bottom: 6px; font-weight: bold; }
+    .info-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+      margin-top: 20px;
+      backdrop-filter: blur(15px);
+      box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+    }
+    .hidden { display: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border: 1px solid rgba(255,255,255,0.2); text-align: center; }
+    th { background: #facc15; color: black; }
+  </style>
 </head>
 <body>
-    hello world
+<div class="page-container">
+  <h1>🗺 Source to Destination</h1>
+
+  <!-- Inputs -->
+  <div class="card grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <label class="block mb-2 font-semibold">Source</label>
+      <div class="flex space-x-2">
+        <input id="sourceInput" type="text" placeholder="Detecting current location..." class="input-box flex-1"/>
+        <button id="voiceSrcBtn" class="voice-btn">🎤</button>
+      </div>
+    </div>
+    <div>
+      <label class="block mb-2 font-semibold">Destination</label>
+      <div class="flex space-x-2">
+        <input id="destInput" type="text" placeholder="Enter or speak destination..." class="input-box flex-1"/>
+        <button id="voiceDestBtn" class="voice-btn">🎤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="card">
+    <div id="map"></div>
+  </div>
+
+  <!-- Route Info -->
+  <div id="routeInfo" class="info-card hidden"></div>
+
+  <!-- Bus Info Grid -->
+  <div class="card">
+    <h2 class="text-2xl font-bold mb-4">🚌 Bus Details</h2>
+    <table id="busTable">
+      <thead>
+        <tr>
+          <th>Bus Number</th>
+          <th>Current Stop</th>
+          <th>Next Stop</th>
+          <th>Status</th>
+          <th>Progress</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let map = L.map("map").setView([12.9716, 77.5946], 13);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution:'&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+}).addTo(map);
+
+let srcMarker, destMarker, routeLine;
+let currentLat, currentLon;
+
+function createPopup(title, text) {
+  return `<div class="custom-popup"><h3>${title}</h3><p>${text}</p><p>✅ Location Verified</p></div>`;
+}
+
+async function geocode(query) {
+  const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+  const data = await res.json();
+  return data.length > 0 ? [parseFloat(data[0].lat), parseFloat(data[0].lon), data[0].display_name] : null;
+}
+
+function formatTime(mins) {
+  if (mins < 60) return `${Math.round(mins)} mins`;
+  if (mins >= 1440) { 
+    let d = Math.floor(mins / 1440);
+    let h = Math.floor((mins % 1440) / 60);
+    return `${d} days ${h} hrs`;
+  }
+  let h = Math.floor(mins / 60);
+  let m = Math.round(mins % 60);
+  return `${h} hrs ${m} mins`;
+}
+
+// Buses array
+let buses = [
+  { busNumber: "KA-43-B-1023", routePath: [], index: 0, status: "On Time" }
+];
+
+function updateBusTable() {
+  const tableBody = document.getElementById("busTable").querySelector("tbody");
+  tableBody.innerHTML = "";
+  buses.forEach(b => {
+    const currentStop = b.index < b.routePath.length ? `Stop ${b.index + 1}` : "Arrived";
+    const nextStop = b.index < b.routePath.length - 1 ? `Stop ${b.index + 2}` : "-";
+    const progress = b.routePath.length > 0 ? Math.round((b.index / (b.routePath.length - 1)) * 100) + "%" : "0%";
+    const row = `<tr>
+      <td>${b.busNumber}</td>
+      <td>${currentStop}</td>
+      <td>${nextStop}</td>
+      <td>${b.status}</td>
+      <td>${progress}</td>
+    </tr>`;
+    tableBody.innerHTML += row;
+  });
+}
+
+function simulateBus(bus) {
+  if (!bus.routePath || bus.routePath.length === 0) return;
+
+  if (bus.marker) { map.removeLayer(bus.marker); clearInterval(bus.timer); }
+
+  bus.marker = L.marker(bus.routePath[0], {
+    icon: L.icon({
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/61/61205.png",
+      iconSize: [40, 40],
+      iconAnchor: [20, 20]
+    })
+  }).addTo(map).bindPopup(`🚌 ${bus.busNumber} is starting...`).openPopup();
+
+  bus.index = 0;
+
+  bus.timer = setInterval(() => {
+    if (bus.index < bus.routePath.length) {
+      bus.marker.setLatLng(bus.routePath[bus.index]);
+      bus.marker.setPopupContent(`🚌 ${bus.busNumber} moving... Stop ${bus.index + 1}/${bus.routePath.length}`);
+      bus.index++;
+      updateBusTable();
+    } else {
+      bus.marker.setPopupContent(`🚌 ${bus.busNumber} reached destination ✅`).openPopup();
+      bus.status = "Arrived";
+      updateBusTable();
+      clearInterval(bus.timer);
+    }
+  }, 500);
+}
+
+async function updateRoute() {
+  const srcInput = document.getElementById("sourceInput").value;
+  const destInput = document.getElementById("destInput").value;
+  if (!destInput) return;
+
+  let srcGeo;
+  if (srcInput === "Current Location" && currentLat && currentLon) {
+    srcGeo = [currentLat, currentLon, "Current Location"];
+  } else {
+    srcGeo = await geocode(srcInput);
+  }
+
+  const destGeo = await geocode(destInput);
+  if (!srcGeo || !destGeo) {
+    alert("Unable to find source or destination location.");
+    return;
+  }
+
+  if (srcMarker) map.removeLayer(srcMarker);
+  if (destMarker) map.removeLayer(destMarker);
+  if (routeLine) map.removeLayer(routeLine);
+
+  srcMarker = L.marker([srcGeo[0], srcGeo[1]]).addTo(map).bindPopup(createPopup("📍 Source", srcGeo[2])).openPopup();
+  destMarker = L.marker([destGeo[0], destGeo[1]]).addTo(map).bindPopup(createPopup("🎯 Destination", destGeo[2])).openPopup();
+
+  // OSRM Routing
+  const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${srcGeo[1]},${srcGeo[0]};${destGeo[1]},${destGeo[0]}?overview=full&geometries=geojson`);
+  const routeData = await routeRes.json();
+
+  if (!routeData.routes || routeData.routes.length === 0) {
+    alert("No route found. Try different source/destination.");
+    return;
+  }
+
+  const coords = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+  routeLine = L.polyline(coords, { color: "yellow", weight: 6 }).addTo(map);
+  map.fitBounds(routeLine.getBounds());
+
+  const distance = routeData.routes[0].distance / 1000;
+  const avgBusSpeed = 30;
+  const timeMins = (distance / avgBusSpeed) * 60;
+
+  const infoBox = document.getElementById("routeInfo");
+  infoBox.innerHTML = `
+    <h3 class="text-2xl font-bold text-yellow-400 mb-2">Route Info</h3>
+    <p>🛣 Distance: <span class="text-pink-400 font-semibold">${distance.toFixed(2)} km</span></p>
+    <p>🚌 Approx Bus Time: <span class="text-emerald-400 font-semibold">${formatTime(timeMins)}</span></p>
+  `;
+  infoBox.classList.remove("hidden");
+
+  buses[0].routePath = coords;
+  simulateBus(buses[0]);
+}
+
+// Voice input
+function setupVoice(btnId, inputId) {
+  document.getElementById(btnId).addEventListener("click", () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert("🎤 Voice search requires Chrome/Edge");
+      return;
+    }
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-IN";
+    recognition.start();
+    recognition.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      document.getElementById(inputId).value = text;
+      updateRoute();
+    };
+  });
+}
+setupVoice("voiceSrcBtn", "sourceInput");
+setupVoice("voiceDestBtn", "destInput");
+
+document.getElementById("destInput").addEventListener("keypress", e => { if (e.key === "Enter") updateRoute(); });
+document.getElementById("sourceInput").addEventListener("keypress", e => { if (e.key === "Enter") updateRoute(); });
+
+// Auto-detect location
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    currentLat = pos.coords.latitude;
+    currentLon = pos.coords.longitude;
+    document.getElementById("sourceInput").value = "Current Location";
+    srcMarker = L.marker([currentLat, currentLon]).addTo(map)
+      .bindPopup(createPopup("📍 Source", "Current Location"))
+      .openPopup();
+    map.setView([currentLat, currentLon], 14);
+  });
+}
+</script>
 </body>
 </html>

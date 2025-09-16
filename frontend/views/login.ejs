@@ -137,8 +137,8 @@
         localStorage.setItem("role", data.user.role);
 
         if (data.user.role === "commuter") window.location.href = "/dashboard";
-        else if (data.user.role === "authority") window.location.href = "/authority-dashboard";
-        else if (data.user.role === "municipal") window.location.href = "/municipal-dashboard";
+        else if (data.user.role === "authority") window.location.href = "/dashboard";
+        else if (data.user.role === "municipal") window.location.href = "/dashboard";
       } else {
         document.getElementById("msg").textContent = data.message;
       }
