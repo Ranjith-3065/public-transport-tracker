@@ -13,7 +13,11 @@
       background: #051f5a;
       color: white;
     }
-    .page-container { max-width: 1200px; margin: auto; padding: 30px 20px; }
+    .page-container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 30px 20px;
+    }
     h1 {
       text-align: center;
       font-size: 36px;
@@ -31,7 +35,10 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.4);
       margin-bottom: 20px;
     }
-    #map { height: 500px; border-radius: 15px; }
+    #map {
+      height: 500px;
+      border-radius: 15px;
+    }
     .input-box {
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -69,7 +76,11 @@
       font-size: 14px;
       text-align: center;
     }
-    .custom-popup h3 { color: #f97316; margin-bottom: 6px; font-weight: bold; }
+    .custom-popup h3 {
+      color: #f97316;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
     .info-card {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -137,11 +148,9 @@
 <script>
 let map = L.map("map").setView([12.9716, 77.5946], 13);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution:'&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-}).addTo(map);
-
+      attribution:'&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+    }).addTo(map);
 let srcMarker, destMarker, routeLine;
-let currentLat, currentLon;
 
 function createPopup(title, text) {
   return `<div class="custom-popup"><h3>${title}</h3><p>${text}</p><p>✅ Location Verified</p></div>`;
@@ -165,76 +174,119 @@ function formatTime(mins) {
   return `${h} hrs ${m} mins`;
 }
 
+
+fetchBuses(sourceInput, destInput);
+
 // Buses array
-let buses = [
-  { busNumber: "KA-43-B-1023", routePath: [], index: 0, status: "On Time" }
-];
+let buses = [];
+
+async function fetchBuses(sourceFilter, destinationFilter) {
+  try {
+    const res = await fetch("/api/buses/available");
+    const data = await res.json();
+
+    const busArray = Array.isArray(data.buses) ? data.buses : [];
+    // ✅ Normalize filters
+    const srcFilter = (sourceFilter || "").toLowerCase().trim();
+    const destFilter = (destinationFilter || "").toLowerCase().trim();
+
+    const filtered = busArray.filter(bus => {
+      const [src, dest] = bus.route.split(/-|→|->/).map(s => s.trim().toLowerCase());
+      return (!srcFilter || src === srcFilter) &&
+             (!destFilter || dest === destFilter);
+    });
+
+    console.log("Filtered buses:", filtered);
+
+    buses = filtered;        // ✅ update global
+    updateBusTable();        // ✅ refresh table
+    updateBusMarkers();      // ✅ refresh map
+  } catch (err) {
+    console.error("Error fetching buses:", err);
+  }
+}
+
+
+
+
 
 function updateBusTable() {
-  const tableBody = document.getElementById("busTable").querySelector("tbody");
+  const tableBody = document.querySelector("#busTable tbody");
   tableBody.innerHTML = "";
   buses.forEach(b => {
-    const currentStop = b.index < b.routePath.length ? `Stop ${b.index + 1}` : "Arrived";
-    const nextStop = b.index < b.routePath.length - 1 ? `Stop ${b.index + 2}` : "-";
-    const progress = b.routePath.length > 0 ? Math.round((b.index / (b.routePath.length - 1)) * 100) + "%" : "0%";
+    const [src, dest] = b.route.split(/-|→|->/).map(s => s.trim());
     const row = `<tr>
       <td>${b.busNumber}</td>
-      <td>${currentStop}</td>
-      <td>${nextStop}</td>
-      <td>${b.status}</td>
-      <td>${progress}</td>
+      <td>${src}</td>
+      <td>${dest || "—"}</td>
+      <td>${b.status || "On Time"}</td>
     </tr>`;
     tableBody.innerHTML += row;
   });
 }
 
-function simulateBus(bus) {
-  if (!bus.routePath || bus.routePath.length === 0) return;
+function updateBusMarkers() {
+  buses.forEach(bus => {
+    console.log("Bus location:", bus.busNumber, bus.location);
+    if (!bus.location || !bus.location.coordinates) return;
 
-  if (bus.marker) { map.removeLayer(bus.marker); clearInterval(bus.timer); }
-
-  bus.marker = L.marker(bus.routePath[0], {
-    icon: L.icon({
-      iconUrl: "https://cdn-icons-png.flaticon.com/512/61/61205.png",
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
-    })
-  }).addTo(map).bindPopup(`🚌 ${bus.busNumber} is starting...`).openPopup();
-
-  bus.index = 0;
-
-  bus.timer = setInterval(() => {
-    if (bus.index < bus.routePath.length) {
-      bus.marker.setLatLng(bus.routePath[bus.index]);
-      bus.marker.setPopupContent(`🚌 ${bus.busNumber} moving... Stop ${bus.index + 1}/${bus.routePath.length}`);
-      bus.index++;
-      updateBusTable();
+    const [lng, lat] = bus.location.coordinates;
+    if (!bus.marker) {
+      bus.marker = L.marker([lat, lng], {
+        icon: L.icon({
+          iconUrl: "https://cdn-icons-png.flaticon.com/512/61/61205.png",
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        })
+      }).addTo(map).bindPopup(`🚌 ${bus.busNumber}<br>${bus.route}`);
     } else {
-      bus.marker.setPopupContent(`🚌 ${bus.busNumber} reached destination ✅`).openPopup();
-      bus.status = "Arrived";
-      updateBusTable();
-      clearInterval(bus.timer);
+      bus.marker.setLatLng([lat, lng]);
+      bus.marker.setPopupContent(`🚌 ${bus.busNumber}<br>${bus.route}`);
     }
-  }, 500);
+  });
+}
+if (buses.length > 0) {
+  const busCoords = buses.map(b => [b.location.coordinates[1], b.location.coordinates[0]]);
+  const bounds = L.latLngBounds(busCoords);
+  map.fitBounds(bounds, { padding: [50, 50] });
 }
 
+
+// ✅ Run fetch when pressing Enter or updating route
+document.getElementById("destInput").addEventListener("keypress", e => {
+  if (e.key === "Enter") {
+    fetchBuses(
+      document.getElementById("sourceInput").value,
+      document.getElementById("destInput").value
+    );
+  }
+});
+document.getElementById("sourceInput").addEventListener("keypress", e => {
+  if (e.key === "Enter") {
+    fetchBuses(
+      document.getElementById("sourceInput").value,
+      document.getElementById("destInput").value
+    );
+  }
+});
+
+// ✅ Initial fetch (no filter)
+fetchBuses();
+setInterval(() => {
+  fetchBuses(
+    document.getElementById("sourceInput").value,
+    document.getElementById("destInput").value
+  );
+}, 5000);
+
 async function updateRoute() {
-  const srcInput = document.getElementById("sourceInput").value;
-  const destInput = document.getElementById("destInput").value;
-  if (!destInput) return;
+  const srcText = document.getElementById("sourceInput").value;
+  const destText = document.getElementById("destInput").value;
+  if (!srcText || !destText) return;
 
-  let srcGeo;
-  if (srcInput === "Current Location" && currentLat && currentLon) {
-    srcGeo = [currentLat, currentLon, "Current Location"];
-  } else {
-    srcGeo = await geocode(srcInput);
-  }
-
-  const destGeo = await geocode(destInput);
-  if (!srcGeo || !destGeo) {
-    alert("Unable to find source or destination location.");
-    return;
-  }
+  const srcGeo = await geocode(srcText);
+  const destGeo = await geocode(destText);
+  if (!srcGeo || !destGeo) return;
 
   if (srcMarker) map.removeLayer(srcMarker);
   if (destMarker) map.removeLayer(destMarker);
@@ -246,30 +298,27 @@ async function updateRoute() {
   // OSRM Routing
   const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${srcGeo[1]},${srcGeo[0]};${destGeo[1]},${destGeo[0]}?overview=full&geometries=geojson`);
   const routeData = await routeRes.json();
+  if (routeData.routes && routeData.routes.length > 0) {
+    const route = routeData.routes[0];
+    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+    routeLine = L.polyline(coords, { color: "yellow", weight: 6 }).addTo(map);
+    map.fitBounds(routeLine.getBounds());
 
-  if (!routeData.routes || routeData.routes.length === 0) {
-    alert("No route found. Try different source/destination.");
-    return;
+    const distance = route.distance / 1000;
+    const avgBusSpeed = 30;
+    const timeMins = (distance / avgBusSpeed) * 60;
+
+    const infoBox = document.getElementById("routeInfo");
+    infoBox.innerHTML = `
+      <h3 class="text-2xl font-bold text-yellow-400 mb-2">Route Info</h3>
+      <p>🛣 Distance: <span class="text-pink-400 font-semibold">${distance.toFixed(2)} km</span></p>
+      <p>🚌 Approx Bus Time: <span class="text-emerald-400 font-semibold">${formatTime(timeMins)}</span></p>
+    `;
+    infoBox.classList.remove("hidden");
+
+    // Assign route to bus and start simulation
+    
   }
-
-  const coords = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-  routeLine = L.polyline(coords, { color: "yellow", weight: 6 }).addTo(map);
-  map.fitBounds(routeLine.getBounds());
-
-  const distance = routeData.routes[0].distance / 1000;
-  const avgBusSpeed = 30;
-  const timeMins = (distance / avgBusSpeed) * 60;
-
-  const infoBox = document.getElementById("routeInfo");
-  infoBox.innerHTML = `
-    <h3 class="text-2xl font-bold text-yellow-400 mb-2">Route Info</h3>
-    <p>🛣 Distance: <span class="text-pink-400 font-semibold">${distance.toFixed(2)} km</span></p>
-    <p>🚌 Approx Bus Time: <span class="text-emerald-400 font-semibold">${formatTime(timeMins)}</span></p>
-  `;
-  infoBox.classList.remove("hidden");
-
-  buses[0].routePath = coords;
-  simulateBus(buses[0]);
 }
 
 // Voice input
@@ -298,15 +347,14 @@ document.getElementById("sourceInput").addEventListener("keypress", e => { if (e
 // Auto-detect location
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(async (pos) => {
-    currentLat = pos.coords.latitude;
-    currentLon = pos.coords.longitude;
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
     document.getElementById("sourceInput").value = "Current Location";
-    srcMarker = L.marker([currentLat, currentLon]).addTo(map)
-      .bindPopup(createPopup("📍 Source", "Current Location"))
-      .openPopup();
-    map.setView([currentLat, currentLon], 14);
+    srcMarker = L.marker([lat, lon]).addTo(map).bindPopup(createPopup("📍 Source", "Current Location")).openPopup();
+    map.setView([lat, lon], 14);
   });
 }
+
 </script>
 </body>
 </html>

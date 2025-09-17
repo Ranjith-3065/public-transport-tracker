@@ -105,4 +105,18 @@ router.get("/route", async (req, res) => {
   }
 });
 
+router.put("/:id/location", async (req, res) => {
+  const { lat, lng } = req.body;
+  try {
+    const bus = await Bus.findByIdAndUpdate(
+      req.params.id,
+      { location: { type: "Point", coordinates: [lng, lat] } },
+      { new: true }
+    );
+    res.json({ success: true, bus });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to update location" });
+  }
+});
+
 module.exports = router;
