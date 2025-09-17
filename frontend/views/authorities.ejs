@@ -11,11 +11,11 @@
 
     <form action="/authorities/add-bus" method="POST" class="space-y-4">
       <input type="text" name="busNumber" placeholder="Bus Number" required class="w-full px-4 py-2 rounded bg-gray-700 text-white">
-      <input type="text" name="route" placeholder="Route / Town Name" required class="w-full px-4 py-2 rounded bg-gray-700 text-white">
+      <input type="text" name="route" id="routeInput" placeholder="Source - Destination" required class="w-full px-4 py-2 rounded bg-gray-700 text-white">
       <input type="text" name="status" placeholder="Status (On Time/Delayed)" class="w-full px-4 py-2 rounded bg-gray-700 text-white">
       <input type="text" name="nextStop" placeholder="Next Stop" class="w-full px-4 py-2 rounded bg-gray-700 text-white">
-      <input type="number" step="any" name="lat" placeholder="Latitude" required class="w-full px-4 py-2 rounded bg-gray-700 text-white">
-      <input type="number" step="any" name="lng" placeholder="Longitude" required class="w-full px-4 py-2 rounded bg-gray-700 text-white">
+      <input type="number" step="any" name="lat" id="latInput" placeholder="Latitude" required class="w-full px-4 py-2 rounded bg-gray-700 text-white">
+      <input type="number" step="any" name="lng" id="lngInput" placeholder="Longitude" required class="w-full px-4 py-2 rounded bg-gray-700 text-white">
 
       <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
         ➕ Add Bus
@@ -59,8 +59,8 @@
   </div>
 
   <script>
+  // Load pending and approved requests
   async function loadRequests() {
-    // Pending requests
     const res = await fetch("/api/bus-requests/pending");
     const data = await res.json();
     if (data.success) {
@@ -83,7 +83,6 @@
       });
     }
 
-    // Approved requests (forwarded by municipal)
     const res2 = await fetch("/api/bus-requests/approved");
     const data2 = await res2.json();
     if (data2.success) {
@@ -113,6 +112,30 @@
   }
 
   loadRequests();
+
+  // Auto-fill Latitude & Longitude while typing with debounce
+  const routeInput = document.getElementById("routeInput");
+  const latInput = document.getElementById("latInput");
+  const lngInput = document.getElementById("lngInput");
+  let debounceTimeout;
+
+  routeInput.addEventListener("input", () => {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(async () => {
+      const source = routeInput.value.split('-')[0]?.trim();
+      if (!source) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(source)}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          latInput.value = data[0].lat;
+          lngInput.value = data[0].lon;
+        }
+      } catch(err) {
+        console.error("Failed to fetch coordinates:", err);
+      }
+    }, 500); // wait 500ms after typing stops
+  });
   </script>
 </body>
 </html>
